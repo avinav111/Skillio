@@ -38,4 +38,14 @@
 
 **Why:** Reinforces the “LLM is narrator, not judge” rule and keeps CI deterministic.
 
+## ADR-005 — Virtual piano audio via Tone.js + Gleitz SoundFont CDN
+
+**Context:** On-screen practice should sound like a piano and support computer-keyboard play without shipping large sample assets in git.
+
+**Decision:** Use **`tone`** `Sampler` with **MusyngKite acoustic grand** MP3s from `gleitz.github.io/midi-js-soundfonts`, with a short triangle-wave fallback if loads fail or time out.
+
+**Why:** Proven URLs, CORS-friendly hosting, good enough for MVP/QA; keeps repo small.
+
+**Consequences:** Offline/air-gapped use falls back to simple tones; later we can self-host samples or swap to `@tonejs/piano` if needed.
+
 **Consequences:** Later we add `openai`/`anthropic` providers behind the same interface with identical JSON inputs.

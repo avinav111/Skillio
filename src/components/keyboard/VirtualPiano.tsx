@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { buildVirtualTranscriptionResult } from "@/lib/transcription/virtual-to-transcription";
-import { noteToMidi } from "@/lib/piano/note-to-midi";
-
-const WHITE_KEYS = ["F3", "G3", "A3", "B3", "C4", "D4", "E4", "F4", "G4"] as const;
+import { useSampledPiano } from "@/hooks/use-sampled-piano";
+import {
+  virtualKeyForCode,
+  VIRTUAL_WHITE_KEYS,
+} from "@/lib/piano/virtual-white-keys";
 
 const BLACK_AFTER_INDEX = new Set([0, 1, 3, 4, 5, 7]);
 
@@ -14,38 +15,92 @@ type Props = {
   onSubmit: (result: ReturnType<typeof buildVirtualTranscriptionResult>) => void;
 };
 
-function playShortTone(midi: number, audioContextRef: MutableRefObject<AudioContext | null>) {
-  const ctx = audioContextRef.current ?? new AudioContext();
-  audioContextRef.current = ctx;
-  if (ctx.state === "suspended") {
-    void ctx.resume();
-  }
-  const frequency = 440 * 2 ** ((midi - 69) / 12);
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const now = ctx.currentTime;
-  oscillator.type = "sine";
-  oscillator.frequency.value = frequency;
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.2);
-}
-
 export function VirtualPiano({ onSubmit }: Props) {
   const [sequence, setSequence] = useState<string[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [pressed, setPressed] = useState<Set<string>>(() => new Set());
+  const { engine, begin, end } = useSampledPiano();
+  const pointerIdsByNoteRef = useRef<Map<string, number>>(new Map());
 
   const appendNote = useCallback((note: string) => {
-    const midi = noteToMidi(note);
-    if (midi !== undefined) {
-      playShortTone(midi, audioContextRef);
-    }
     setSequence((prev) => [...prev, note]);
   }, []);
+
+  const startNote = useCallback(
+    async (note: string, record: boolean) => {
+      if (engine === "loading") {
+        return;
+      }
+      await begin(note);
+      setPressed((prev) => new Set(prev).add(note));
+      if (record) {
+        appendNote(note);
+      }
+    },
+    [appendNote, begin, engine]
+  );
+
+  const stopNote = useCallback(
+    async (note: string) => {
+      await end(note);
+      setPressed((prev) => {
+        const next = new Set(prev);
+        next.delete(note);
+        return next;
+      });
+    },
+    [end]
+  );
+
+  useEffect(() => {
+    function isTypingTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+      return Boolean(
+        target.closest("input, textarea, select, [contenteditable=true]")
+      );
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      if (engine === "loading") {
+        return;
+      }
+      const mapping = virtualKeyForCode(event.code);
+      if (!mapping) {
+        return;
+      }
+      if (event.repeat) {
+        return;
+      }
+      event.preventDefault();
+      void startNote(mapping.note, true);
+    }
+
+    function onKeyUp(event: KeyboardEvent) {
+      const mapping = virtualKeyForCode(event.code);
+      if (!mapping) {
+        return;
+      }
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      void stopNote(mapping.note);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [engine, startNote, stopNote]);
 
   function handleClear() {
     setSequence([]);
@@ -67,25 +122,81 @@ export function VirtualPiano({ onSubmit }: Props) {
       <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">On-screen keyboard</p>
         <p className="text-sm text-muted-foreground">
-          Tap the white keys in order for your exercise, then submit. This path skips
-          the microphone and sends structured note taps straight to the same
-          evaluator used after transcription.
+          Hold mouse or keyboard for sustain. Each new press adds one step to the
+          exercise sequence. Samples: MusyngKite acoustic grand (Gleitz CDN).
         </p>
+        {engine === "loading" ? (
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Loading piano samples…
+          </p>
+        ) : engine === "fallback" ? (
+          <p className="text-xs text-muted-foreground">
+            Piano samples could not load; using a simple fallback tone instead.
+          </p>
+        ) : null}
       </div>
 
       <div className="overflow-x-auto">
         <div className="relative mx-auto flex w-max select-none rounded-lg bg-muted/40 p-4">
           <div className="relative flex">
-            {WHITE_KEYS.map((label, index) => {
+            {VIRTUAL_WHITE_KEYS.map((key, index) => {
               const isBlackSlot = BLACK_AFTER_INDEX.has(index);
+              const isActive = pressed.has(key.note);
               return (
-                <div key={label} className="relative flex">
+                <div key={key.note} className="relative flex">
                   <button
                     type="button"
-                    className="relative flex h-40 w-11 cursor-pointer items-end justify-center border-x border-b border-border bg-card pb-3 text-xs font-medium text-muted-foreground transition hover:bg-muted active:bg-primary/15"
-                    onClick={() => appendNote(label)}
+                    disabled={engine === "loading"}
+                    className={`relative flex h-44 w-12 cursor-pointer flex-col items-center justify-end gap-1 border-x border-b border-border bg-card pb-2 text-[0.65rem] font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isActive
+                        ? "bg-primary/25 text-foreground ring-2 ring-primary/50"
+                        : "text-muted-foreground"
+                    }`}
+                    onPointerDown={(event) => {
+                      if (engine === "loading") {
+                        return;
+                      }
+                      event.preventDefault();
+                      (event.currentTarget as HTMLButtonElement).setPointerCapture(
+                        event.pointerId
+                      );
+                      pointerIdsByNoteRef.current.set(key.note, event.pointerId);
+                      void startNote(key.note, true);
+                    }}
+                    onPointerUp={(event) => {
+                      const stored = pointerIdsByNoteRef.current.get(key.note);
+                      if (stored === event.pointerId) {
+                        pointerIdsByNoteRef.current.delete(key.note);
+                        void stopNote(key.note);
+                      }
+                      try {
+                        (event.currentTarget as HTMLButtonElement).releasePointerCapture(
+                          event.pointerId
+                        );
+                      } catch {
+                        /* not captured */
+                      }
+                    }}
+                    onPointerCancel={(event) => {
+                      pointerIdsByNoteRef.current.delete(key.note);
+                      void stopNote(key.note);
+                      try {
+                        (event.currentTarget as HTMLButtonElement).releasePointerCapture(
+                          event.pointerId
+                        );
+                      } catch {
+                        /* */
+                      }
+                    }}
+                    onLostPointerCapture={() => {
+                      pointerIdsByNoteRef.current.delete(key.note);
+                      void stopNote(key.note);
+                    }}
                   >
-                    {label}
+                    <span className="rounded border border-border bg-muted/80 px-1.5 py-0.5 font-mono text-[0.6rem] text-foreground">
+                      {key.keyLabel}
+                    </span>
+                    <span>{key.note}</span>
                   </button>
                   {isBlackSlot ? (
                     <div className="pointer-events-none absolute -right-4 top-0 z-10 h-24 w-8 rounded-b-md bg-foreground shadow-md" />
@@ -98,8 +209,12 @@ export function VirtualPiano({ onSubmit }: Props) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Black keys are shown for orientation only (same as the lesson diagram). Early
-        exercises use white keys.
+        Computer keys (when not typing in a field):{" "}
+        <span className="font-mono text-foreground">
+          {VIRTUAL_WHITE_KEYS.map((k) => k.keyLabel).join(" ")}
+        </span>{" "}
+        → {VIRTUAL_WHITE_KEYS.map((k) => k.note).join(" ")}. Black keys are visual
+        only for now.
       </p>
 
       <div className="rounded-md border border-dashed border-border bg-background/60 px-3 py-2 text-sm text-muted-foreground">
