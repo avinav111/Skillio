@@ -1,0 +1,27 @@
+---
+alwaysApply: true
+---
+
+# Architecture Rules
+
+Keep these layers separate:
+
+1. Curriculum
+2. Recording
+3. Transcription
+4. Confidence filtering
+5. Rubric evaluator
+6. AI feedback
+7. Progress tracking
+
+The LLM must never be the source of truth for correctness.
+
+Correctness must be determined by evaluator logic using structured transcription results and lesson rubrics.
+
+Use TypeScript types for shared data contracts.
+
+Prefer small, testable modules.
+
+Do not create circular dependencies.
+
+Do not call AI inside evaluator functions.

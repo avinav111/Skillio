@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+
+# Evaluator Rules
+
+Evaluator functions must be pure and testable.
+
+Inputs:
+- ExerciseRubric
+- TranscriptionResult
+
+Outputs:
+- EvaluationResult
+
+Evaluator must support:
+- passed
+- failed
+- unclear
+
+If confidence is below threshold, return unclear.
+
+Do not use LLMs for scoring.
+
+Write tests for evaluator behavior.
+
+The evaluator is the source of truth for:
+- note correctness
+- sequence correctness
+- confidence accept/reject
+- pass/fail/unclear status

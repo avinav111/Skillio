@@ -1,0 +1,32 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Git Workflow Rules
+
+Use Git from the beginning.
+
+Before large changes, propose a plan.
+
+Make small commits.
+
+Use commit messages:
+- feat:
+- fix:
+- refactor:
+- docs:
+- test:
+- chore:
+
+Never delete large amounts of code without explaining why.
+
+After major changes, update:
+- docs/BUILD_LOG.md
+- docs/DECISIONS.md if architecture changed
+- docs/IDEAS_INBOX.md only for future ideas
+
+Always summarize:
+- files changed
+- how to test
+- next recommended step

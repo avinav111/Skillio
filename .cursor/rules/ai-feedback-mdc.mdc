@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+# AI Feedback Rules
+
+AI feedback explains evaluator results.
+
+It must not:
+- claim to directly hear audio
+- invent mistakes
+- decide correctness
+- discuss posture or technique unless explicitly in lesson/evaluator context
+- overpraise
+- produce long feedback unless requested
+
+It must:
+- be beginner-friendly
+- be concise
+- give one clear next step
+- distinguish low-confidence recording from user error

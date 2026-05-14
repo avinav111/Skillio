@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+# Product Rules
+
+This project is PracticeOS: an adaptive AI skill-learning framework starting with beginner piano.
+
+MVP users are total beginners/casual learners.
+
+The first skill domain is piano only.
+
+Core loop:
+Teach → Try → Analyze → Explain → Adapt.
+
+Do not build unrelated skills, advanced piano features, payments, social features, mobile app, camera analysis, or real-time feedback unless explicitly requested.
+
+The MVP input pipeline is:
+microphone recording → audio-to-MIDI transcription → confidence filtering → rubric-based evaluator → AI-generated coaching.
+
+Always prioritize the smallest working version of the learning loop.

@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+# Beginner Developer Rules
+
+The project owner is not an advanced programmer.
+
+Explain implementation steps clearly.
+
+Do not assume advanced knowledge.
+
+Prefer simple, maintainable architecture.
+
+When multiple options exist, recommend one.
+
+Avoid clever code.
+
+After coding, explain how to run and test the result.
+
+When a task is vague, convert it into a concrete plan first.
