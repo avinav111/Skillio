@@ -37,6 +37,18 @@ Manual QA:
 - Progress, auth, and persistence are **localStorage** at best — Supabase comes later.
 - Safari may pick a different default codec than Chrome; recorder now falls back automatically but still requires browser support.
 
-### Next recommended step
-
 Implement the **Python FastAPI + Basic Pitch** worker and swap the server-side provider behind the same `TranscriptionResult` contract.
+
+## 2026-05-14 — Virtual on-screen keyboard (lesson toggle)
+
+### What changed
+
+- Added **`virtual`** transcription provider and `buildVirtualTranscriptionResult` helper.
+- New **`VirtualPiano`** client component (interactive white keys, short sine preview, submit/clear).
+- **`LessonPracticePanel`** toggle: Microphone vs On-screen keyboard; remounts practice UI on mode switch and “Try again”.
+
+### How to test
+
+1. Open `/lessons/middle_c_001` or `/lessons/c_d_e_001`.
+2. Choose **On-screen keyboard**, tap `C4` five times (or `C4`→`D4`→`E4`), **Submit for analysis**.
+3. Confirm evaluator + coach match the virtual `TranscriptionResult` and warnings mention virtual input.

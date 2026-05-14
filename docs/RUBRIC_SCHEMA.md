@@ -20,7 +20,7 @@
 | Field                 | Type            | Description |
 |-----------------------|-----------------|-------------|
 | `recordingId`         | string          | Correlates attempts (UUID from server in MVP). |
-| `provider`            | enum            | `mock`, `basic_pitch`, `klangio`. |
+| `provider`            | enum            | `mock`, `virtual` (on-screen taps), `basic_pitch`, `klangio`. |
 | `detectedNotes`       | `DetectedNote[]`| Ordered events with per-note confidence. |
 | `overallConfidence`   | number          | Aggregate mic-analysis confidence. |
 | `warnings`            | string[]        | Non-fatal issues (e.g., mock provider reminder). |

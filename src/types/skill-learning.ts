@@ -42,7 +42,11 @@ export type DetectedNote = {
   confidence: number;
 };
 
-export type TranscriptionProviderId = "mock" | "basic_pitch" | "klangio";
+export type TranscriptionProviderId =
+  | "mock"
+  | "virtual"
+  | "basic_pitch"
+  | "klangio";
 
 export type TranscriptionResult = {
   recordingId: string;
