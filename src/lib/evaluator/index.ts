@@ -5,6 +5,7 @@ import type {
 } from "@/types/skill-learning";
 import { resolveOverallConfidence } from "./helpers";
 import { evaluateOrderedNotes } from "./ordered";
+import { evaluateRhythmExercise } from "./rhythm";
 
 export function evaluateSingleNoteExercise(
   rubric: ExerciseRubric,
@@ -38,6 +39,8 @@ export function evaluateForRubric(
       return evaluateRepeatedNoteExercise(rubric, transcription);
     case "sequence":
       return evaluateSequenceExercise(rubric, transcription);
+    case "rhythm":
+      return evaluateRhythmExercise(rubric, transcription);
     default: {
       const overallConfidence = resolveOverallConfidence(transcription);
       return {

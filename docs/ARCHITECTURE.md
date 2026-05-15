@@ -33,13 +33,20 @@ Single **Next.js 15** application at the repo root:
 - `src/lib/ai/**` — Template “coach” copy (LLM adapter later).
 - `src/types/**` — Shared TypeScript contracts.
 
-## Transcription providers (planned)
+## Transcription providers
 
-| Provider        | Role in MVP                               |
-|-----------------|-------------------------------------------|
-| `mock`          | Deterministic outputs for UI + evaluator |
-| `basic_pitch`   | Next step: Python FastAPI worker         |
-| `klangio`       | Future optional cloud provider           |
+| Provider        | Role |
+|-----------------|------|
+| `mock`          | Deterministic outputs for UI + evaluator (scenario picker). |
+| `virtual`       | On-screen keyboard: ordered note list with **real** per-tap `performance.now()` onsets, normalized to seconds for the evaluator. |
+| `basic_pitch`   | Optional Python FastAPI worker; Next `/api/transcribe` forwards audio and maps to `TranscriptionResult`. |
+| `klangio`       | Reserved for a future optional cloud provider. |
+
+Rhythm exercises compare consecutive `DetectedNote.startTime` values to the rubric’s `targetSpacingMs` ± `timingToleranceMs`. Mock and Basic Pitch populate those fields from audio; virtual mode depends on the client capture described above.
+
+Lesson-level **`demonstrationEvents`** (see [RUBRIC_SCHEMA.md](RUBRIC_SCHEMA.md)) drive an optional “Play example” UI (scheduled playback); they are not sent to the evaluator.
+
+**Lesson phases:** optional ordered `lessonPhases` on each lesson power multi-step practice (isolate → combine → integrate). Completion for unlocks is recorded only when the **last** phase passes; see [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
 
 ## Deployment sketch (later)
 

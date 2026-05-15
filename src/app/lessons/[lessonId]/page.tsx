@@ -2,12 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LessonPracticePanel } from "@/components/lesson/LessonPracticePanel";
+import { LessonPhasePractice } from "@/components/lesson/LessonPhasePractice";
+import { MarkLessonReadButton } from "@/components/lesson/MarkLessonReadButton";
 import { PianoKeyboard } from "@/components/keyboard/PianoKeyboard";
-import {
-  getExerciseById,
-  getLessonById,
-} from "@/lib/curriculum/initial-lessons";
+import { resolveLessonPhases } from "@/lib/curriculum/lesson-phases";
+import { getLessonById } from "@/lib/curriculum/initial-lessons";
 import { cn } from "@/lib/utils";
 
 type LessonPageProps = {
@@ -22,10 +21,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound();
   }
 
-  const exercise =
-    lesson.exerciseIds.length > 0
-      ? getExerciseById(lesson.exerciseIds[0] ?? "")
-      : undefined;
+  const phases = resolveLessonPhases(lesson);
+  const hasPracticeSteps = lesson.requiresRecording && phases.length > 0;
 
   return (
     <div className="space-y-8">
@@ -61,18 +58,44 @@ export default async function LessonPage({ params }: LessonPageProps) {
           <CardTitle>Visual keyboard</CardTitle>
         </CardHeader>
         <CardContent>
-          <PianoKeyboard highlightNotes={lesson.id === "c_d_e_001" ? ["C4", "D4", "E4"] : ["C4"]} />
+          <PianoKeyboard
+            highlightNotes={
+              lesson.id === "c_d_e_001"
+                ? ["C4", "D4", "E4"]
+                : lesson.id === "c_position_001"
+                  ? ["C4", "D4", "E4", "F4", "G4"]
+                  : lesson.id === "steady_beat_001"
+                    ? ["C4", "D4", "E4", "G4"]
+                    : lesson.id === "register_direction_001"
+                      ? ["F3", "G3", "A3", "C4", "G4"]
+                      : lesson.id === "register_connect_001"
+                        ? ["A3", "B3", "C4", "G3"]
+                        : lesson.id === "f_g_a_001"
+                          ? ["F3", "G3", "A3"]
+                          : lesson.id === "descend_c_b_a_001"
+                            ? ["C4", "B3", "A3"]
+                            : ["C4"]
+            }
+          />
         </CardContent>
       </Card>
 
-      {lesson.requiresRecording && exercise ? (
+      {hasPracticeSteps ? (
         <Card>
           <CardHeader>
-            <CardTitle>Exercise</CardTitle>
+            <CardTitle>Practice steps</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>{exercise.instructions}</p>
-            <LessonPracticePanel lesson={lesson} exercise={exercise} />
+            <LessonPhasePractice lesson={lesson} />
+          </CardContent>
+        </Card>
+      ) : lesson.requiresRecording ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Practice unavailable</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <p>This lesson requires recording but has no configured practice steps.</p>
           </CardContent>
         </Card>
       ) : (
@@ -82,12 +105,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
             <p>
-              This lesson is intentionally read-only for the MVP. When you are ready
-              to practice recorded drills, continue to the next lesson.
+              This lesson is read-only. Mark it complete when you have spent a few
+              minutes with the visuals so the roadmap can unlock the next steps.
             </p>
-            <Link className={cn(buttonVariants())} href="/lessons/middle_c_001">
-              Go to Finding Middle C
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <MarkLessonReadButton lessonId={lesson.id} />
+              <Link className={cn(buttonVariants({ variant: "outline" }))} href="/roadmap">
+                Back to roadmap
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}

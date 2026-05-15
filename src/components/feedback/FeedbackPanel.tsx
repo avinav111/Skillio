@@ -51,6 +51,16 @@ export function FeedbackPanel({ evaluation, aiFeedback }: Props) {
             <p>{detectedPreview.length > 0 ? detectedPreview.join(" · ") : "—"}</p>
           </div>
           <div>
+            <p className="font-medium text-foreground">Note counts</p>
+            <p>
+              Expected {evaluation.expectedNotes.length} · Detected{" "}
+              {evaluation.detectedNotes.length}
+              {evaluation.detectedNotes.length !== evaluation.expectedNotes.length
+                ? " — extra detections often come from double-triggers or background notes."
+                : ""}
+            </p>
+          </div>
+          <div>
             <p className="font-medium text-foreground">Confidence</p>
             <p>{evaluation.confidence.toFixed(2)} (overall signal quality)</p>
           </div>
@@ -58,6 +68,36 @@ export function FeedbackPanel({ evaluation, aiFeedback }: Props) {
             <p className="font-medium text-foreground">Score</p>
             <p>{evaluation.score.toFixed(2)}</p>
           </div>
+          {evaluation.rhythmScoringBreakdown ? (
+            <details className="rounded-md border border-border bg-muted/30 px-3 py-2">
+              <summary className="cursor-pointer font-medium text-foreground">
+                How this score was calculated (rhythm)
+              </summary>
+              <div className="mt-3 space-y-2 text-xs">
+                <p>
+                  Combined score = pitch × {evaluation.rhythmScoringBreakdown.pitchWeight}{" "}
+                  + timing × {evaluation.rhythmScoringBreakdown.timingWeight}. Pass when
+                  combined ≥ {evaluation.rhythmScoringBreakdown.passingAccuracy.toFixed(2)}.
+                </p>
+                <p>
+                  Pitch sub-score: {evaluation.rhythmScoringBreakdown.pitchScore.toFixed(2)}{" "}
+                  (note names in order). Timing sub-score:{" "}
+                  {evaluation.rhythmScoringBreakdown.timingScore.toFixed(2)} (share of
+                  intervals within tolerance).
+                </p>
+                <p className="font-medium text-foreground">Intervals (onset to onset)</p>
+                <ul className="list-disc space-y-1 pl-4">
+                  {evaluation.rhythmScoringBreakdown.intervals.map((row, idx) => (
+                    <li key={`int-${row.fromIndex}-${row.toIndex}-${idx}`}>
+                      Notes {row.fromIndex}→{row.toIndex}: target{" "}
+                      {row.expectedSpacingMs} ms, measured {row.measuredSpacingMs} ms —{" "}
+                      {row.withinTolerance ? "within tolerance" : "outside tolerance"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          ) : null}
           <div>
             <p className="font-medium text-foreground">Summary</p>
             <p>{evaluation.summary}</p>
@@ -66,8 +106,10 @@ export function FeedbackPanel({ evaluation, aiFeedback }: Props) {
             <div>
               <p className="font-medium text-foreground">Structured mistakes</p>
               <ul className="list-disc space-y-1 pl-5">
-                {evaluation.mistakes.map((mistake) => (
-                  <li key={`${mistake.code}-${mistake.message}`}>{mistake.message}</li>
+                {evaluation.mistakes.map((mistake, i) => (
+                  <li key={`${mistake.code}-${i}-${mistake.position ?? ""}`}>
+                    {mistake.message}
+                  </li>
                 ))}
               </ul>
             </div>

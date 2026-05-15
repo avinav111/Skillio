@@ -165,6 +165,51 @@ describe("evaluateSequenceExercise", () => {
   });
 });
 
+describe("evaluateRhythmExercise", () => {
+  const rhythmRubric: ExerciseRubric = {
+    id: "steady_c_four",
+    lessonId: "steady_beat_001",
+    type: "rhythm",
+    expectedNotes: ["C4", "C4", "C4", "C4"],
+    attemptsRequired: 4,
+    passingAccuracy: 0.78,
+    minimumConfidence: 0.65,
+    maxExtraNotes: 0,
+    targetSpacingMs: 600,
+    timingToleranceMs: 150,
+    instructions: "Four C4s evenly spaced.",
+  };
+
+  it("passes when pitches and 600ms spacing are within tolerance", () => {
+    const transcription = makeTranscription({
+      detectedNotes: [
+        { note: "C4", startTime: 0, endTime: 0.15, confidence: 0.9 },
+        { note: "C4", startTime: 0.6, endTime: 0.75, confidence: 0.9 },
+        { note: "C4", startTime: 1.2, endTime: 1.35, confidence: 0.9 },
+        { note: "C4", startTime: 1.8, endTime: 1.95, confidence: 0.9 },
+      ],
+    });
+    const result = evaluateForRubric(rhythmRubric, transcription);
+    expect(result.status).toBe("passed");
+    expect(result.rhythmScoringBreakdown?.combinedScore).toBeCloseTo(result.score, 5);
+    expect(result.rhythmScoringBreakdown?.intervals).toHaveLength(3);
+  });
+
+  it("fails when spacing is too irregular", () => {
+    const transcription = makeTranscription({
+      detectedNotes: [
+        { note: "C4", startTime: 0, endTime: 0.15, confidence: 0.9 },
+        { note: "C4", startTime: 0.35, endTime: 0.5, confidence: 0.9 },
+        { note: "C4", startTime: 1.2, endTime: 1.35, confidence: 0.9 },
+        { note: "C4", startTime: 1.5, endTime: 1.65, confidence: 0.9 },
+      ],
+    });
+    const result = evaluateForRubric(rhythmRubric, transcription);
+    expect(result.status).toBe("failed");
+    expect(result.mistakes.some((m) => m.code === "timing_deviation")).toBe(true);
+  });
+});
+
 describe("edge cases", () => {
   it("returns unclear when there are no detected notes and confidence resolves low", () => {
     const transcription = makeTranscription({

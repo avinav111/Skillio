@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { buildVirtualTranscriptionResult } from "@/lib/transcription/virtual-to-transcription";
+import {
+  buildVirtualTranscriptionResult,
+  type VirtualNoteCapture,
+} from "@/lib/transcription/virtual-to-transcription";
 import { useSampledPiano } from "@/hooks/use-sampled-piano";
 import {
   virtualKeyForCode,
@@ -10,19 +13,27 @@ import {
 } from "@/lib/piano/virtual-white-keys";
 
 const BLACK_AFTER_INDEX = new Set([0, 1, 3, 4, 5, 7]);
+const SAME_NOTE_DEBOUNCE_MS = 45;
 
 type Props = {
   onSubmit: (result: ReturnType<typeof buildVirtualTranscriptionResult>) => void;
 };
 
 export function VirtualPiano({ onSubmit }: Props) {
-  const [sequence, setSequence] = useState<string[]>([]);
+  const [captures, setCaptures] = useState<VirtualNoteCapture[]>([]);
   const [pressed, setPressed] = useState<Set<string>>(() => new Set());
   const { engine, begin, end } = useSampledPiano();
   const pointerIdsByNoteRef = useRef<Map<string, number>>(new Map());
+  const lastSameNoteRef = useRef<{ note: string; t: number } | null>(null);
 
-  const appendNote = useCallback((note: string) => {
-    setSequence((prev) => [...prev, note]);
+  const appendCapture = useCallback((note: string) => {
+    const now = performance.now();
+    const last = lastSameNoteRef.current;
+    if (last && last.note === note && now - last.t < SAME_NOTE_DEBOUNCE_MS) {
+      return;
+    }
+    lastSameNoteRef.current = { note, t: now };
+    setCaptures((prev) => [...prev, { note, onsetMs: now }]);
   }, []);
 
   const startNote = useCallback(
@@ -33,10 +44,10 @@ export function VirtualPiano({ onSubmit }: Props) {
       await begin(note);
       setPressed((prev) => new Set(prev).add(note));
       if (record) {
-        appendNote(note);
+        appendCapture(note);
       }
     },
-    [appendNote, begin, engine]
+    [appendCapture, begin, engine]
   );
 
   const stopNote = useCallback(
@@ -103,18 +114,19 @@ export function VirtualPiano({ onSubmit }: Props) {
   }, [engine, startNote, stopNote]);
 
   function handleClear() {
-    setSequence([]);
+    setCaptures([]);
+    lastSameNoteRef.current = null;
   }
 
   function handleSubmit() {
-    if (sequence.length === 0) {
+    if (captures.length === 0) {
       return;
     }
     const recordingId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `virtual_${Date.now()}`;
-    onSubmit(buildVirtualTranscriptionResult(sequence, recordingId));
+    onSubmit(buildVirtualTranscriptionResult(captures, recordingId));
   }
 
   return (
@@ -123,7 +135,8 @@ export function VirtualPiano({ onSubmit }: Props) {
         <p className="text-sm font-medium text-foreground">On-screen keyboard</p>
         <p className="text-sm text-muted-foreground">
           Hold mouse or keyboard for sustain. Each new press adds one step to the
-          exercise sequence. Samples: MusyngKite acoustic grand (Gleitz CDN).
+          exercise sequence. Spacing between presses is used for rhythm grading.
+          Samples: MusyngKite acoustic grand (Gleitz CDN).
         </p>
         {engine === "loading" ? (
           <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -219,7 +232,9 @@ export function VirtualPiano({ onSubmit }: Props) {
 
       <div className="rounded-md border border-dashed border-border bg-background/60 px-3 py-2 text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Sequence: </span>
-        {sequence.length > 0 ? sequence.join(" → ") : "No notes yet"}
+        {captures.length > 0
+          ? captures.map((c) => c.note).join(" → ")
+          : "No notes yet"}
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -229,7 +244,7 @@ export function VirtualPiano({ onSubmit }: Props) {
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={sequence.length === 0}
+          disabled={captures.length === 0}
         >
           Submit for analysis
         </Button>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { InstrumentType, SkillLevel } from "@/types/skill-learning";
+import { loadLocalProgress, saveLocalProgress } from "@/lib/progress/local-persistence";
 
 const STORAGE_KEY = "glide_onboarding_profile_v1";
 
@@ -42,6 +43,13 @@ export function OnboardingForm() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    const progress = loadLocalProgress();
+    saveLocalProgress({
+      ...progress,
+      skillLevel: form.skillLevel,
+      instrumentType: form.instrumentType,
+      microphoneOk: form.microphoneOk,
+    });
     setSaved(true);
     router.push("/dashboard");
   }

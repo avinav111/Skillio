@@ -29,5 +29,18 @@ export function scenarioOptionsForExercise(
     ];
   }
 
+  if (
+    exerciseId === "steady_c_four" ||
+    exerciseId === "steady_c_two" ||
+    exerciseId === "steady_c_g_four" ||
+    exerciseId === "steady_c_d_e_g" ||
+    exerciseId === "register_steady_c_review"
+  ) {
+    return [
+      ...baseScenarios,
+      { value: "fail_steady_timing", label: "Mock: uneven spacing" },
+    ];
+  }
+
   return baseScenarios;
 }

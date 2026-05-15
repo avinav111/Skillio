@@ -31,6 +31,8 @@ export type ExerciseRubric = {
   minimumConfidence: number;
   maxExtraNotes: number;
   timingToleranceMs?: number;
+  /** Expected spacing between consecutive note onsets (rhythm), milliseconds. */
+  targetSpacingMs?: number;
   instructions: string;
 };
 
@@ -72,11 +74,32 @@ export type EvaluationMistake = {
     | "extra_note"
     | "wrong_order"
     | "low_confidence"
-    | "too_many_extra_notes";
+    | "too_many_extra_notes"
+    | "timing_deviation";
   message: string;
   position?: number;
   expectedNote?: string;
   detectedNote?: string;
+};
+
+export type RhythmIntervalBreakdown = {
+  fromIndex: number;
+  toIndex: number;
+  expectedSpacingMs: number;
+  measuredSpacingMs: number;
+  withinTolerance: boolean;
+};
+
+export type RhythmScoringBreakdown = {
+  expectedNoteCount: number;
+  detectedNoteCount: number;
+  pitchScore: number;
+  timingScore: number;
+  pitchWeight: number;
+  timingWeight: number;
+  combinedScore: number;
+  passingAccuracy: number;
+  intervals: RhythmIntervalBreakdown[];
 };
 
 export type EvaluationResult = {
@@ -89,6 +112,8 @@ export type EvaluationResult = {
   confidence: number;
   recommendation: EvaluationRecommendation;
   summary: string;
+  /** Present when rubric `type` is `rhythm` and timing fields are configured. */
+  rhythmScoringBreakdown?: RhythmScoringBreakdown;
 };
 
 export type AIFeedback = {
@@ -112,6 +137,22 @@ export type Attempt = {
   createdAt: string;
 };
 
+export type LessonDemonstrationEvent = {
+  note: string;
+  offsetMs: number;
+};
+
+/** One graded step inside a lesson (isolate → combine → integrate). */
+export type LessonPhase = {
+  id: string;
+  title: string;
+  /** Shown above the recorder; explains the goal of this step. */
+  narrative?: string;
+  exerciseId: string;
+  /** Optional demo for this step only; falls back to lesson-level `demonstrationEvents` when absent. */
+  demonstrationEvents?: LessonDemonstrationEvent[];
+};
+
 export type Lesson = {
   id: string;
   moduleId: string;
@@ -120,7 +161,20 @@ export type Lesson = {
   explanation: string;
   concepts: string[];
   prerequisites: string[];
+  /** Owning exercises; kept in sync with `lessonPhases` for tooling. */
   exerciseIds: string[];
   estimatedMinutes: number;
   requiresRecording: boolean;
+  /** Optional scheduled playback before practice (whole-lesson intro). */
+  demonstrationEvents?: LessonDemonstrationEvent[];
+  /**
+   * Ordered practice gates. When set, all graded steps use these in order.
+   * When absent, a single implicit phase is derived from `exerciseIds[0]`.
+   */
+  lessonPhases?: LessonPhase[];
+  /**
+   * When false, on-screen keyboard cannot cover every note in a phase (mic/MIDI only).
+   * Currently unused by UI; reserved for future gating.
+   */
+  virtualCompatible?: boolean;
 };
